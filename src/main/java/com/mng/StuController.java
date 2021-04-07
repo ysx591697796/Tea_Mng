@@ -29,8 +29,7 @@ public class StuController {
 
     @RequestMapping("/stuinfo/upinfophone")
     public void upinfophone(@RequestBody StuBean stuBean) throws SQLException{
-        userDao.infoUpdate_phone(stuBean.getUsername(),stuBean.getPhone(),stuBean.getBirthday());
-//        return tag;
+        userDao.infoUpdate_phone(stuBean.getUsername(),stuBean.getPhone(),stuBean.getBirthday(),stuBean.getRateScore());
     }
 
     @RequestMapping("/stuinfo/getinfolist")

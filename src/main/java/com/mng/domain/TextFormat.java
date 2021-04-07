@@ -96,8 +96,8 @@ public class TextFormat {
                 if (docx.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getRPr().getRFonts() != null) {
                     TextType ty = new TextType();
                     CTFonts rFonts1 = docx.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getRPr().getRFonts();
-                    if (ty.isEnglishFont(run) && rFonts1.getAscii() != null) return rFonts1.getAscii();
-                    else if (ty.isChinessFont(run) && rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                    if ( rFonts1.getAscii() != null) return rFonts1.getAscii();
+                    else if ( rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
                 }
             }
             if (docx.getStyles().getStyle(paragraph.getStyleID()).getLinkStyleID() != null) {
@@ -108,8 +108,8 @@ public class TextFormat {
                         TextType ty = new TextType();
                         CTFonts rFonts1 = docx.getStyles().getStyle(docx.getStyles().getStyle(paragraph.getStyleID())
                                 .getLinkStyleID()).getCTStyle().getRPr().getRFonts();
-                        if (ty.isEnglishFont(run) && rFonts1.getAscii() != null) return rFonts1.getAscii();
-                        else if (ty.isChinessFont(run) && rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                        if ( rFonts1.getAscii() != null) return rFonts1.getAscii();
+                        else if ( rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
                     }
                 }
             }

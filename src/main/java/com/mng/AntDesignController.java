@@ -9,13 +9,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Controller
 //@Configuration
-public class AntDesignController implements ErrorController{
+public class AntDesignController implements ErrorController {
     @Override
-    public String getErrorPath(){
+    public String getErrorPath() {
         return "/error";
     }
+
     @RequestMapping(value = "/error")
-    public String getIndex(){
+    public String getIndex() {
         return "index";
     }
 }

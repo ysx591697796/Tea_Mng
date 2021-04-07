@@ -1,5 +1,6 @@
 package com.mng.Dao;
 
+import org.omg.CORBA.StringSeqHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.relational.core.sql.SQL;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,7 +57,7 @@ public class UserDao {
             stm = connection.prepareStatement(sql);
             rs = stm.executeQuery();
             if (rs.next()) {
-                tag.put("avatar","https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png");
+                tag.put("avatar", "https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png");
                 tag.put("username", username);
                 tag.put("name", rs.getString("name"));
                 tag.put("userid", rs.getString("id"));
@@ -124,7 +125,10 @@ public class UserDao {
                 tag.put("phone", rs.getString("phone"));
                 tag.put("birthday", rs.getString("birthday"));
                 tag.put("grade", rs.getString("grade"));
-                tag.put("avatar","https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png");
+                tag.put("avatar", "https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png");
+                tag.put("ratescore", rs.getString("rate_score"));
+                tag.put("ratecount", rs.getString("rate_count"));
+                tag.put("testcount", rs.getString("test_count"));
             }
             rs.close();
             stm.close();
@@ -150,20 +154,34 @@ public class UserDao {
         connection.close();
     }
 
-    public void infoUpdate_phone(String username,String phone, String birthday) throws SQLException {
+    public void infoUpdate_phone(String username, String phone, String birthday, Float score) throws SQLException {
         Connection connection = dataSource.getConnection();
         PreparedStatement stm = null;
-        String sql = "update stuinfo set phone=?,birthday=? where username=?;";
-        stm = connection.prepareStatement(sql);
-        stm.setString(1, phone);
-        stm.setString(2, birthday);
-        stm.setString(3, username);
+        String sql;
+        if (score != null) {
+            sql = "update stuinfo set rate_score=rate_score+?,rate_count=rate_count+1 where username=?;";
+            stm = connection.prepareStatement(sql);
+            stm.setString(1, String.valueOf(score));
+            stm.setString(2, username);
+        } else {
+            if (phone != null) {
+                sql = "update stuinfo set phone=?,birthday=? where username=?;";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, phone);
+                stm.setString(2, birthday);
+                stm.setString(3, username);
+            }else {
+                sql = "update stuinfo set test_count=test_count+1 where username=?;";
+                stm = connection.prepareStatement(sql);
+                stm.setString(1, username);
+            }
+        }
         stm.execute();
         stm.close();
         connection.close();
     }
 
-    public Map<String,Object> getInfoList(String grade,String class1) throws SQLException{
+    public Map<String, Object> getInfoList(String grade, String class1) throws SQLException {
         Map<String, Object> tag = new HashMap<>();
         ArrayList<Object> list = new ArrayList<Object>();
         Map<String, Object> info = null;
@@ -173,7 +191,7 @@ public class UserDao {
         String sql = "select * from stuinfo where grade = '" + grade + "' and class = '" + class1 + "';";
         stm = connection.prepareStatement(sql);
         rs = stm.executeQuery();
-        while(rs.next()){
+        while (rs.next()) {
             info = new HashMap<>();
             info.put("username", rs.getString("username"));
             info.put("name", rs.getString("name"));
@@ -187,7 +205,7 @@ public class UserDao {
 //            info.put("avatar","https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png");
             list.add(info);
         }
-        tag.put("infoList1",list);
+        tag.put("infoList1", list);
         rs.close();
         stm.close();
         connection.close();

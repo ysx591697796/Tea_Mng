@@ -12,6 +12,33 @@ public class StuBean {
     private String birthday;
     private int status;
     private String grade;
+    private Float testCount;
+    private Float rateCount;
+    private Float rateScore;
+
+    public Float getTestCount() {
+        return testCount;
+    }
+
+    public void setTestCount(Float testCount) {
+        this.testCount = testCount;
+    }
+
+    public Float getRateCount() {
+        return rateCount;
+    }
+
+    public void setRateCount(Float rateCount) {
+        this.rateCount = rateCount;
+    }
+
+    public Float getRateScore() {
+        return rateScore;
+    }
+
+    public void setRateScore(Float rateScore) {
+        this.rateScore = rateScore;
+    }
 
     public String getClass1() {
         return class1;

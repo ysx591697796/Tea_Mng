@@ -1,31 +1,35 @@
 package com.mng;
 
 import com.mng.application.TextFormatApplication;
-import com.mng.domain.TextFormat;
 import com.mng.domain.WordToPoi;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageMar;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageSz;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api")
 public class WordController {
 
     @RequestMapping("/fileupload")
-    public String uploadfile(@RequestParam("file") MultipartFile request) throws IOException {
+    public Map<String, String> uploadfile(@RequestParam("file") MultipartFile request) throws IOException {
+        Map<String, String> tag = new HashMap<>();
         if (request == null) {
-            return "fail";
+            tag.put("status", "fail");
+            return tag;
         }
 
         //将word转换为XWPFDocument
@@ -34,153 +38,228 @@ public class WordController {
         List<XWPFParagraph> paragraphs = document.getParagraphs();
         //WordToPoi
         WordToPoi wp = new WordToPoi();
-        //TextFormat
-        TextFormat tf = new TextFormat();
         //TextFormatApplication
-        TextFormatApplication textFormatApplication = new TextFormatApplication();
+        TextFormatApplication textFormatApplication = new TextFormatApplication(document);
 
         //Page错误
-        StringBuilder pageStr = new StringBuilder();
+        String pageStr = textFormatApplication.pageSizePart();
         //Mar错误
-        StringBuilder marStr = new StringBuilder();
+        String marStr = textFormatApplication.pageMarPart();
+        //Footer错误
+        String footerStr = textFormatApplication.footerPart();
+        //PaperHeader错误
+        StringBuilder paperHStr = new StringBuilder();
+        //Abstract错误
+        StringBuilder abstractStr = new StringBuilder();
         //Header错误
         StringBuilder headerStr = new StringBuilder();
+        //Text错误
+        StringBuilder textStr = new StringBuilder();
+        //Text错误
+        StringBuilder errStr = new StringBuilder();
 
-        //页大小 A4:11906W,16838H
-        CTSectPr sectPr = document.getDocument().getBody().getSectPr();
-        CTPageSz pageSz = sectPr.getPgSz();
-        if (!pageSz.getW().toString().equals("11906") || !pageSz.getH().toString().equals("16838")) {
-            headerStr.append("-页面大小- 页面大小出错，需设置A4!\n");
-        } else {
+        //Begin
+        int begin = 0;
+        //End
+        int end = 0;
 
-        }
-//        System.out.println(pageSz.getW() + " " + pageSz.getH() + " " + pageSz.getOrient());
-
-        //页边距 top:1701(30mm) bottom:1418(25mm) left:1701(30mm) right:1134(20mm)
-        CTPageMar ctPageMar = sectPr.getPgMar();
-        if (!ctPageMar.getTop().toString().equals("1701") || !ctPageMar.getBottom().toString().equals("1418") ||
-                !ctPageMar.getLeft().toString().equals("1701") || !ctPageMar.getRight().toString().equals("1134")) {
-            marStr.append("-页面边距- 页面边距出错，");
-            if (!ctPageMar.getTop().toString().equals("1701")) {
-                marStr.append("上(需设置30mm)");
-            } else if (!ctPageMar.getBottom().toString().equals("1418")) {
-                marStr.append("下(需设置25mm)");
-            } else if (!ctPageMar.getLeft().toString().equals("1701")) {
-                marStr.append("左(需设置30mm)");
-            } else if (!ctPageMar.getRight().toString().equals("1134")) {
-                marStr.append("有(需设置20mm)");
-            } else {
-
-            }
-            marStr.append("!\n");
-        }
-//        System.out.println("top:" + ctPageMar.getTop() + " bottom:" + ctPageMar.getBottom()
-//                + " left:" + ctPageMar.getLeft() + " right:" + ctPageMar.getRight());
-
-        //正文
         if (paragraphs.size() != 0) {
             for (int i = 0; i < paragraphs.size(); i++) {
+                if (wp.getTitleLvl(document, paragraphs.get(i)).equals("0") &&
+                        paragraphs.get(i).getText().startsWith("第")) {
+                    begin = i;
+                    continue;
+                }
+                if (paragraphs.get(i).getText().trim().startsWith("致  谢") ||
+                        paragraphs.get(i).getText().trim().startsWith("致 谢") ||
+                        paragraphs.get(i).getText().trim().startsWith("致谢")) {
+                    end = i;
+                    continue;
+                }
+            }
+        }
+
+        //文章
+        if (paragraphs.size() != 0) {
+            for (int i = 0; i < paragraphs.size(); i++) {
+                //专业段(中文)
+                if (paragraphs.get(i).getText().startsWith("专业")) {
+                    paperHStr.append(textFormatApplication.chnHeaderPart(i));
+                    continue;
+                }
+
+                //专业段(英文)
+                if (paragraphs.get(i).getText().startsWith("Major")) {
+                    paperHStr.append(textFormatApplication.engHeaderPart(i));
+                    continue;
+                }
+
+                //摘要段(中文)
+                if (paragraphs.get(i).getText().trim().startsWith("摘 要") || paragraphs.get(i)
+                        .getText().trim().startsWith("摘要")) {
+                    abstractStr.append(textFormatApplication.chnAbstractpart(i));
+                    continue;
+                }
+
+                //摘要段(英文)
+                if (paragraphs.get(i).getText().trim().startsWith("Abstract")) {
+                    abstractStr.append(textFormatApplication.engAbstractpart(i));
+                    continue;
+                }
+
+                //关键词
+                if (paragraphs.get(i).getText().trim().startsWith("关键词")) {
+                    abstractStr.append(textFormatApplication.chnKeywordsPart(i));
+                    continue;
+                }
+
+                //关键词(英文)
+                if (paragraphs.get(i).getText().trim().startsWith("Key words")) {
+                    abstractStr.append(textFormatApplication.engKeywordsPart(i));
+                    continue;
+                }
+
+                //目录
+                if (paragraphs.get(i).getText().trim().startsWith("目  录") ||
+                        paragraphs.get(i).getText().trim().startsWith("目 录") ||
+                        paragraphs.get(i).getText().trim().startsWith("目录")) {
+                    textStr.append(textFormatApplication.cataPart(i, 720, "目录"));
+                    continue;
+                }
+
+                //正文
                 if (wp.getTitleLvl(document, paragraphs.get(i)).equals("0")) {
-//                    boolean flag = true;
-                    boolean sizeFlag = textFormatApplication.isCorrectSize(document, paragraphs.get(i), (float) 12.0);
-                    boolean themeFlag = textFormatApplication.isCorrectTheme(document, paragraphs.get(i), "黑体");
-//                    List<XWPFRun> runs = paragraphs.get(i).getRuns();
-//                    for (XWPFRun r : runs) {
-//                        if (!r.getText(0).equals(" ")) {
-//                            try {
-//                                if (!tf.getFontTheme(r, document, paragraphs.get(i)).equals("黑体")) {
-//                                    flag = false;
-//                                    themeFlag = false;
-//                                }
-//                                if (tf.getFontSize(document, paragraphs.get(i), r) != 10.5) {
-//                                    flag = false;
-//                                    sizeFlag = false;
-//                                }
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    }
-                    if (!themeFlag || !sizeFlag) {
-                        if (!sizeFlag && !themeFlag) {
-                            headerStr.append("-1级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体大小及样式出错!\n");
-                        } else if (!themeFlag) {
-                            headerStr.append("-1级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体样式出错!\n");
-                        } else if (!sizeFlag) {
-                            headerStr.append("-1级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体大小出错!\n");
-                        }
-                    } else {
-//                        System.out.println("-1级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-//                                + "...] 段落无误!");
-                    }
+                    headerStr.append(textFormatApplication.textHeaderPart1(i, 1, "center", 720));
+                    continue;
                 } else if (wp.getTitleLvl(document, paragraphs.get(i)).equals("1")) {
-                    boolean sizeFlag = textFormatApplication.isCorrectSize(document, paragraphs.get(i), (float) 12.0);
-                    boolean themeFlag = textFormatApplication.isCorrectTheme(document, paragraphs.get(i), "黑体");
-//                    List<XWPFRun> runs = paragraphs.get(i).getRuns();
-//                    for (XWPFRun r : runs) {
-//                        if (!r.getText(0).equals(" ")) {
-//                            try {
-//                                if (!tf.getFontTheme(r, document, paragraphs.get(i)).equals("黑体") ||
-//                                        tf.getFontTheme(r, document, paragraphs.get(i)) == null) {
-//                                    flag = false;
-//                                    themeFlag = false;
-//                                }
-//                                if (tf.getFontSize(document, paragraphs.get(i), r) != 10.5) {
-//                                    flag = false;
-//                                    sizeFlag = false;
-//                                }
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    }
-                    if (!themeFlag || !sizeFlag) {
-                        if (!sizeFlag && !themeFlag) {
-                            headerStr.append("-2级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体大小及样式出错!\n");
-                        } else if (!themeFlag) {
-                            headerStr.append("-2级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体样式出错!\n");
-                        } else if (!sizeFlag) {
-                            headerStr.append("-2级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-                                    + "...] 段落字体大小出错!\n");
-                        }
-                    } else {
-//                        System.out.println("-2级标题- [" + paragraphs.get(i).getText().substring(0, 6)
-//                                + "...] 段落无误!");
-                    }
-                } else {
-//                    List<XWPFRun> runs = paragraphs.get(i).getRuns();
-//                    for (XWPFRun r : runs) {
-//                        try {
-//                            System.out.println(tf.getFontBold(document,paragraphs.get(i),r));
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
+                    headerStr.append(textFormatApplication.textHeaderPart1(i, 2, "left", 360));
+                    continue;
+                } else if (wp.getTitleLvl(document, paragraphs.get(i)).equals("2")) {
+                    headerStr.append(textFormatApplication.textHeaderPart2(i, 3));
+                    continue;
+                } else if (wp.getTitleLvl(document, paragraphs.get(i)).startsWith("TOC")) {
+                    textStr.append(textFormatApplication.cataTextPart(i));
+                    continue;
+                }
+
+                //参考文献
+                if (paragraphs.get(i).getText().trim().startsWith("参考文献")) {
+                    textStr.append(textFormatApplication.litPart(i));
+                    continue;
+                }
+
+                if (paragraphs.get(i).getText().trim().startsWith("[")) {
+                    textStr.append(textFormatApplication.litTextPart(i));
+                    continue;
+                }
+
+                //致谢
+                if (paragraphs.get(i).getText().trim().startsWith("致  谢") ||
+                        paragraphs.get(i).getText().trim().startsWith("致 谢") ||
+                        paragraphs.get(i).getText().trim().startsWith("致谢")) {
+                    textStr.append(textFormatApplication.cataPart(i, -1, "致谢"));
+                    continue;
+                }
+
+            }
+        }
+
+        if (paragraphs.size() != 0) {
+            for (int i = begin - 1; i < end; i++) {
+                if (wp.getTitleLvl(document, paragraphs.get(i)).equals("text")
+                        && paragraphs.get(i).getText() != null && !paragraphs.get(i).getText().trim().equals("")) {
+                    textStr.append(textFormatApplication.textPart(i));
                 }
             }
         }
 
         if (pageStr != null && pageStr.length() > 0) {
-            System.out.println("---页面部分---:\n" + pageStr);
+            errStr.append("---页面部分---:\n" + pageStr + "\n");
         } else {
-            System.out.println("---页面部分---:（无错）");
+            errStr.append("---页面部分---:（无错）\n\n");
         }
+        tag.put("pageStr",pageStr.toString());
         if (marStr != null && marStr.length() > 0) {
-            System.out.println("---页边距部分---:\n" + pageStr);
+            errStr.append("---页边距部分---:\n" + marStr + "\n");
         } else {
-            System.out.println("---页边距部分---:（无错）");
+            errStr.append("---页边距部分---:（无错）\n\n");
         }
-        if (headerStr != null && headerStr.length() > 0) {
-            System.out.println("---标题部分---:\n" + headerStr);
+        tag.put("marStr",marStr.toString());
+        if (footerStr != null && footerStr.length() > 0) {
+            errStr.append("---页码部分---:\n" + footerStr + "\n");
         } else {
-            System.out.println("---标题部分---:（无错）");
+            errStr.append("---页码部分---:（无错）\n\n");
+        }
+        tag.put("footerStr",footerStr.toString());
+        if (paperHStr != null && paperHStr.length() > 0) {
+            errStr.append("---论文标题部分---:\n" + paperHStr + "\n");
+        } else {
+            errStr.append("---论文标题部分---:（无错）\n\n");
+        }
+        tag.put("paperHStr",paperHStr.toString());
+        if (abstractStr != null && abstractStr.length() > 0) {
+            errStr.append("---摘要部分---:\n" + abstractStr + "\n");
+        } else {
+            errStr.append("---摘要部分---:（无错）\n\n");
+        }
+        tag.put("abstractStr",abstractStr.toString());
+        if (headerStr != null && headerStr.length() > 0) {
+            errStr.append("---大纲标题部分---:\n" + headerStr + "\n");
+        } else {
+            errStr.append("---大纲标题部分---:（无错）\n\n");
+        }
+        tag.put("headerStr",headerStr.toString());
+        if (textStr != null && textStr.length() > 0) {
+            errStr.append("---正文部分---:\n" + textStr + "\n");
+        } else {
+            errStr.append("---正文部分---:（无错）\n\n");
+        }
+        tag.put("textStr",textStr.toString());
+
+        SimpleDateFormat df = new SimpleDateFormat("HH-mm-ss");
+        String path = "./" + df.format(new Date()) + ".doc";
+        String name = df.format(new Date()) + ".doc";
+        try {
+            InputStream is = new ByteArrayInputStream(errStr.toString().getBytes("utf-8"));
+            OutputStream os = new FileOutputStream(path);
+            POIFSFileSystem fs = new POIFSFileSystem();
+            fs.createDocument(is, "WordDocument");
+            fs.writeFilesystem(os);
+            fs.close();
+            is.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        return "success";
+        tag.put("status", "ok");
+        tag.put("errFile", name);
+        tag.put("errStr", errStr.toString());
+
+        return tag;
+    }
+
+    @RequestMapping("/fileupload1")
+    public void uploadfile1(@RequestParam("name") String name, HttpServletResponse response, HttpServletRequest request1) throws IOException {
+        response.setCharacterEncoding("UTF-8"); //字符编码
+        response.setContentType("multipart/form-data"); //二进制传输数据
+        //设置响应头
+        response.setHeader("Content-Disposition",
+                "attachment;fileName=" + URLEncoder.encode(name, "UTF-8"));
+
+        File file = new File("./" + name);
+        //2、 读取文件--输入流
+        InputStream input = new FileInputStream(file);
+        //3、 写出文件--输出流
+        OutputStream out = response.getOutputStream();
+
+        byte[] buff = new byte[1024];
+        int index = 0;
+        //4、执行 写出操作
+        while ((index = input.read(buff)) != -1) {
+            out.write(buff, 0, index);
+            out.flush();
+        }
+        out.close();
+        input.close();
     }
 }
