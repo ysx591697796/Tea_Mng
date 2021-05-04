@@ -1,8 +1,6 @@
 package com.mng.Dao;
 
-import org.omg.CORBA.StringSeqHelper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.relational.core.sql.SQL;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
@@ -170,7 +168,7 @@ public class UserDao {
                 stm.setString(1, phone);
                 stm.setString(2, birthday);
                 stm.setString(3, username);
-            }else {
+            } else {
                 sql = "update stuinfo set test_count=test_count+1 where username=?;";
                 stm = connection.prepareStatement(sql);
                 stm.setString(1, username);
@@ -206,6 +204,37 @@ public class UserDao {
             list.add(info);
         }
         tag.put("infoList1", list);
+        rs.close();
+        stm.close();
+        connection.close();
+        return tag;
+    }
+
+    public Map<String, Object> getErrorList() throws SQLException {
+        Map<String, Object> tag = new HashMap<>();
+        ArrayList<Object> list = new ArrayList<Object>();
+        Map<String, Object> info = null;
+        Connection connection = dataSource.getConnection();
+        PreparedStatement stm = null;
+        ResultSet rs = null;
+        String sql = "select * from error_num where id=1;";
+        stm = connection.prepareStatement(sql);
+        rs = stm.executeQuery();
+        if (rs.next()){
+            tag.put("page_size",rs.getString("page_size"));
+            tag.put("page_mar",rs.getString("page_mar"));
+            tag.put("footer_err",rs.getString("footer_err"));
+            tag.put("abstract_header",rs.getString("abstract_header"));
+            tag.put("abstract_major",rs.getString("abstract_major"));
+            tag.put("abstract_abs",rs.getString("abstract_abs"));
+            tag.put("abstract_key",rs.getString("abstract_key"));
+            tag.put("text_cata",rs.getString("text_cata"));
+            tag.put("text_header1",rs.getString("text_header1"));
+            tag.put("text_header2",rs.getString("text_header2"));
+            tag.put("text_lit",rs.getString("text_lit"));
+            tag.put("text_header3",rs.getString("text_header3"));
+            tag.put("text_part",rs.getString("text_part"));
+        }
         rs.close();
         stm.close();
         connection.close();

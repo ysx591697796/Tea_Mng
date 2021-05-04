@@ -3,10 +3,7 @@ package com.mng.domain;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr;
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSpacing;
-
-import java.math.BigInteger;
 
 public class ParasFormat {
 
@@ -24,7 +21,7 @@ public class ParasFormat {
                 return pPr.getInd().getFirstLineChars().intValue();
             }
         }
-        return -1;
+        return 0;
     }
 
     /**
@@ -174,14 +171,16 @@ public class ParasFormat {
         if (document.getStyles().getStyle(paragraph.getStyleID()) != null) {
             if (document.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getPPr() != null) {
                 CTPPr pPr = document.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getPPr();
-                if (pPr.getSpacing() != null) return Integer.parseInt(pPr.getSpacing().getLine().toString());
+                if (pPr.getSpacing() != null && pPr.getSpacing().getLine() != null)
+                    return Integer.parseInt(pPr.getSpacing().getLine().toString());
             }
             if (document.getStyles().getStyle(paragraph.getStyleID()).getLinkStyleID() != null) {
                 if (document.getStyles().getStyle(document.getStyles().getStyle(paragraph.getStyleID()).getLinkStyleID())
-                        .getCTStyle().getRPr() != null) {
+                        .getCTStyle().getPPr() != null) {
                     CTPPr pPr = document.getStyles().getStyle(document.getStyles().getStyle(paragraph.getStyleID())
                             .getLinkStyleID()).getCTStyle().getPPr();
-                    if (pPr.getSpacing() != null) return Integer.parseInt(pPr.getSpacing().getLine().toString());
+                    if (pPr.getSpacing() != null && pPr.getSpacing().getLine() != null)
+                        return Integer.parseInt(pPr.getSpacing().getLine().toString());
                 }
             }
         }

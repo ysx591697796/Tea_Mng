@@ -64,6 +64,13 @@ public class TextFormat {
             }
         }
 
+        if (paragraph.getCTP().getPPr().getPStyle() == null && docx.getStyles().getStyle("a") != null
+                && docx.getStyles().getStyle("a").getCTStyle().getRPr().getSz() != null) {
+            if (docx.getStyles().getStyle("a").getCTStyle().getRPr().getSz() != null) {
+                return (float) docx.getStyles().getStyle("a").getCTStyle().getRPr().getSz().getVal().longValue() / 2;
+            }
+        }
+
         //文档默认字体大小
         float fontSize = this.getDocxDefaultFontSize(docx);
         return fontSize;
@@ -96,8 +103,11 @@ public class TextFormat {
                 if (docx.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getRPr().getRFonts() != null) {
                     TextType ty = new TextType();
                     CTFonts rFonts1 = docx.getStyles().getStyle(paragraph.getStyleID()).getCTStyle().getRPr().getRFonts();
-                    if ( rFonts1.getAscii() != null) return rFonts1.getAscii();
-                    else if ( rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                    if (ty.isEnglishFont(run) && rFonts1.getAscii() != null) return rFonts1.getAscii();
+                    else if (ty.isChinessFont(run) && rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                    else if (rFonts1.getAscii() != null) {
+                        return rFonts1.getAscii();
+                    }
                 }
             }
             if (docx.getStyles().getStyle(paragraph.getStyleID()).getLinkStyleID() != null) {
@@ -108,10 +118,25 @@ public class TextFormat {
                         TextType ty = new TextType();
                         CTFonts rFonts1 = docx.getStyles().getStyle(docx.getStyles().getStyle(paragraph.getStyleID())
                                 .getLinkStyleID()).getCTStyle().getRPr().getRFonts();
-                        if ( rFonts1.getAscii() != null) return rFonts1.getAscii();
-                        else if ( rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                        if (ty.isEnglishFont(run) && rFonts1.getAscii() != null) return rFonts1.getAscii();
+                        else if (ty.isChinessFont(run) && rFonts1.getEastAsia() != null) return rFonts1.getEastAsia();
+                        else if (rFonts1.getAscii() != null) {
+                            return rFonts1.getAscii();
+                        }
                     }
                 }
+            }
+        }
+
+        if (paragraph.getCTP().getPPr().getPStyle() == null && docx.getStyles().getStyle("a") != null
+                && docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts() != null) {
+            TextType ty = new TextType();
+            if (ty.isEnglishFont(run) && docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getAscii() != null) {
+                return docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getAscii();
+            } else if (ty.isChinessFont(run) && docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getEastAsia() != null) {
+                return docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getEastAsia();
+            } else if (docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getAscii() != null) {
+                return docx.getStyles().getStyle("a").getCTStyle().getRPr().getRFonts().getAscii();
             }
         }
 
@@ -119,10 +144,18 @@ public class TextFormat {
         String fontTheme = "";
         //如果为英文字体
         TextType ty = new TextType();
-        if (ty.isEnglishFont(run)) {
-            fontTheme = docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getAscii();
+        if (ty.isChinessFont(run)) {
+            if (docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getEastAsiaTheme() != null) {
+                fontTheme = String.valueOf(docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getEastAsiaTheme());
+            } else if (docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getEastAsia() != null) {
+                fontTheme = String.valueOf(docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getEastAsia());
+            }
         } else {
-            fontTheme = docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getEastAsia();
+            if (docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getAsciiTheme() != null) {
+                fontTheme = String.valueOf(docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getAsciiTheme());
+            } else if (docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getAscii() != null) {
+                fontTheme = String.valueOf(docx.getStyle().getDocDefaults().getRPrDefault().getRPr().getRFonts().getAscii());
+            }
         }
         return fontTheme;
     }

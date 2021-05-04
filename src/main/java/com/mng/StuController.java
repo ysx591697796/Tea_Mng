@@ -24,6 +24,7 @@ public class StuController {
     @RequestMapping("/stuinfo/queryinfo")
     public Map<String,Object> queryinfo(@RequestBody JsonBean jsonBean) throws SQLException{
         Map<String, Object> tag = userDao.currentUser_formUserName(jsonBean.getUserName());
+        tag.putAll(userDao.getErrorList());
         return tag;
     }
 
