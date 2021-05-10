@@ -996,9 +996,9 @@ public class TextFormatApplication {
                 , cataSize);
         boolean marFlag = true;
         try {
-            System.out.println(pf.getParaSpacing(paragraphs.get(i), document) + str);
+//            System.out.println(pf.getParaSpacing(paragraphs.get(i), document) + str);
             marFlag = (pf.getParaSpacing(paragraphs.get(i), document) == mar) ? true : false;
-            System.out.println(marFlag);
+//            System.out.println(marFlag);
         } catch (Exception e) {
             e.printStackTrace();
         }
